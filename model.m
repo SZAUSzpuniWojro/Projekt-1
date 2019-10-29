@@ -11,11 +11,11 @@ Fd = 13; %cm^3/s
 tau = 80;
 
 %opóŸnienie
-if ( t < tau)
-    F1 = 0;
-else
+%if ( t < tau)
+ %   F1 = 0;
+%else
     F1 = 52;
-end
+%end
 
 %musi byæ nieujemne
 if ( V(1) < 0)
@@ -33,7 +33,6 @@ F2 = a1 * nthroot(V(1)/C1, 4);
 F3 = a2 * nthroot(V(2)/A2, 2);
     
 %esencja modelu
-dVdt = [ F1 + Fd - F2
-        F2 - F3];
+dVdt = [ F1 + Fd - F2; F2 - F3];
     
 end
