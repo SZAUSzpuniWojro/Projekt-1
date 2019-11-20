@@ -21,3 +21,6 @@ legend('h1','h2');
 xlabel('Czas [s]');
 ylabel('Wysokoœæ [cm]');
  
+
+G_lin = linear_model([h1p,h2p], F1p, FDp, tau);
+step(G_lin)
