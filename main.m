@@ -9,7 +9,7 @@ h1p=11.7;
 Ts = 0.1;
 
 F1_step_val = 0;
-FD_step_val = 20;
+FD_step_val = 0;
 
 
 F1=[F1p, F1p+ F1_step_val];
@@ -33,3 +33,5 @@ G_lin = linear_model([h1p,h2p], F1p, FDp, tau);
 [y,t,x] = linear_sim(G_lin, F1, FD, step_time, [0, 0], sim_time);
 x = x + ones(size(x)).*[h1p,h2p];
 plot(t,x(:,2));
+
+w = create_wages(F1_step_val, FD_step_val, 2)
