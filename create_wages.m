@@ -106,11 +106,10 @@ else
 end
 w = [w1, w2, w3, w4, w5];
 w_s = sum(w);
-for i=1:size(w)
+s = size(w);
+for i=1:s(2)
     w(i) = w(i)/w_s;
 end
-
-
 
 end
 
