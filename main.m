@@ -8,7 +8,7 @@ h2p=7.98;
 h1p=11.7;
 Ts = 0.1;
 
-F1_step_val = 10;
+F1_step_val = 0;
 FD_step_val = 20;
 
 
