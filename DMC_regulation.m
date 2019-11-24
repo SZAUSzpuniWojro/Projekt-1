@@ -1,6 +1,8 @@
 function [y, uk] = DMC_regulation(Gz, D, N, Nu, lambda, t_sim, y_zad, init_inputs, init_states)
 %DMC_REGULATION 
 
+%ode options
+options = odeset('RelTol',1e-8,'AbsTol',1e-10);
 
 %Parametry startowe
 F1_init = init_inputs(1);
@@ -8,7 +10,7 @@ Fd_init = init_inputs(2);
 h1_init = init_states(1);
 h2_init = init_states(2);
 
-%OdpowiedŸ skokowa
+%Odpowiedz skokowa
 s = step(Gz, D/Gz.Ts);
 s = s(:,:,1);
 
@@ -36,19 +38,19 @@ end
 K=(M'*M + LMBD)^(-1)*M';
 
 
-%Czêœæ dynamiczna
-dUp=zeros(1,obj.D-1)';
+%Czesc dynamiczna
+dUp=zeros(1,(D-1))';
 y_zad(1:N)= y_zad;
 
 uk= ones((Gz.InputDelay(1)),1).*F1_init;
 y = ones(t_sim, 1).*h2_init;
 h = [h1_init, h2_init];
-
+u_prev = 0;
 %Main
 for k=2:t_sim
     if k >= (Gz.InputDelay(1)) %don't know bout that chief
-        stateHandler = @(t,x) stateFunction(t,x,uk(k - (Gz.InputDelay(1))), Fd_init);
-        [t, h] = ode45(stateHandler,[0 Gz.Ts],h(end, :), options);
+        stateHandler = @(t,x) model(t,x,uk(k + 1 - (Gz.InputDelay(1))), Fd_init); %%%TUUUUUUUUUUUUU
+        [t, h] = ode45(stateHandler,[0 1],h(end, :), options);
         y(k) = h(end,2);
     end
     
