@@ -12,7 +12,7 @@ h2_init = init_states(2);
 
 %Odpowiedz skokowa
 s = step(Gz, D/Gz.Ts);
-s = s(:,:,2);
+s = s(:,:,1);
 
 LMBD = lambda*eye(Nu);
 
@@ -53,7 +53,7 @@ u_prev = F1_init;
 for k=2:t_sim
     if k >= (Gz.InputDelay(1)) %don't know bout that chief
         stateHandler = @(t,x) model(t,x,u, Fd_init); 
-        [t, h] = ode45(stateHandler,[0 1],h(end, :), options);
+        [t, h] = ode45(stateHandler,[0 Gz.Ts],h(end, :), options);
         y(k) = h(end,2);
     end
     
