@@ -1,3 +1,5 @@
+clear;
+
 F1 = 52;
 FD = 13;
 tau = 80;
@@ -9,9 +11,13 @@ D = 2;
 N = 2;
 Nu = 2;
 lambda = 0.5;
-sim_time = 1000;
+sim_time = 5000;
 y_zad = 20;
 
 [y, uk] = DMC_regulation(G, D, N, Nu, lambda, sim_time, y_zad, [F1, FD], init_values);
 
-plot(1:sim_time, [y, uk]);
+plot(1:sim_time, y);
+hold on;
+plot(1:sim_time, uk);
+legend('y','u_k');
+hold off;

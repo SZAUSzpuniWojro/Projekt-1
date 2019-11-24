@@ -1,4 +1,4 @@
-function [y, uk] = DMC_regulation(Gz, D, N, Nu, lambda, t_sim, y_zad, init_inputs, init_states)
+function [y, u_out] = DMC_regulation(Gz, D, N, Nu, lambda, t_sim, y_zad, init_inputs, init_states)
 %DMC_REGULATION 
 
 %ode options
@@ -12,7 +12,7 @@ h2_init = init_states(2);
 
 %Odpowiedz skokowa
 s = step(Gz, D/Gz.Ts);
-s = s(:,:,1);
+s = s(:,:,2);
 
 LMBD = lambda*eye(Nu);
 
@@ -45,11 +45,14 @@ y_zad(1:N)= y_zad;
 uk= ones((Gz.InputDelay(1)),1).*F1_init;
 y = ones(t_sim, 1).*h2_init;
 h = [h1_init, h2_init];
-u_prev = 0;
+
+u_out = [F1_init];
+u_prev = F1_init;
+
 %Main
 for k=2:t_sim
     if k >= (Gz.InputDelay(1)) %don't know bout that chief
-        stateHandler = @(t,x) model(t,x,uk(k + 1 - (Gz.InputDelay(1))), Fd_init); %%%TUUUUUUUUUUUUU
+        stateHandler = @(t,x) model(t,x,u, Fd_init); 
         [t, h] = ode45(stateHandler,[0 1],h(end, :), options);
         y(k) = h(end,2);
     end
@@ -62,12 +65,14 @@ for k=2:t_sim
    
    %Prawo regulacji
    u=u_prev+dUk(1);
+   u_out = [u_out; u];
    u_prev = u;
  
    %Wyznaczenie zmian sterowania
    dUp=[dUk(1) dUp(1:end-1)']';
 end
 
+u_out = u_out';
 
 end
 
