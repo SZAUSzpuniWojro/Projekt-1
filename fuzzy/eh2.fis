@@ -1,0 +1,35 @@
+[System]
+Name='eh2'
+Type='sugeno'
+Version=2.0
+NumInputs=1
+NumOutputs=2
+NumRules=2
+AndMethod='prod'
+OrMethod='probor'
+ImpMethod='prod'
+AggMethod='sum'
+DefuzzMethod='wtaver'
+
+[Input1]
+Name='F1'
+Range=[0 100]
+NumMFs=2
+MF1='small':'trapmf',[-45 -5 30 70]
+MF2='big':'trapmf',[30 70 105 145]
+
+[Output1]
+Name='wage_1'
+Range=[0 1]
+NumMFs=1
+MF1='mf1':'constant',[1]
+
+[Output2]
+Name='wage_2'
+Range=[0 1]
+NumMFs=1
+MF1='mf1':'constant',[1]
+
+[Rules]
+1, 1 0 (1) : 1
+2, 0 1 (1) : 1
