@@ -1,7 +1,30 @@
-function [y, u_out] = fuzzy_dmc_regulation(Gz, D, N, Nu, lambda, t_sim, y_zad, init_inputs, init_states)
+function [y, u_out] = fuzzy_dmc_regulation(F1_lin_tab, FD_lin, h2_lin_tab, t_sim, y_zad, init_inputs, init_states)
+
+
 
 %ode options
 options = odeset('RelTol',1e-8,'AbsTol',1e-10);
+
+%params
+tau = 80;
+T = 0.1
+
+D = 480;
+N = 190;
+Nu = 1;
+lambda = 100;
+
+%tworzenie tablizy lokalnych transmitancji
+Gz_tab = zeros(1,5);
+for i=1:5
+    Gs = linear_model(h2_lin_tab(i), F1_lin_tab(i), FD_lin, tau); 
+    Gz_tab(i) = c2d(tf(Gs),T,'zoh');
+end
+
+%TODO: przygotowaæ funkcjê przynale¿noœci f F1 -> {(0,1) x 5}
+
+% na ten moment mamy: create_wages
+
 
 %Parametry startowe
 F1_init = init_inputs(1);
@@ -10,6 +33,7 @@ h1_init = init_states(1);
 h2_init = init_states(2);
 
 %Odpowiedz skokowa
+for Gz in Gz_tab
 s = step(Gz, D/Gz.Ts);
 s = s(:,:,1);
 
