@@ -1,30 +1,19 @@
 function [y, u_out] = fuzzy_dmc_regulation(F1_lin_tab, FD_lin, h2_lin_tab, t_sim, y_zad, init_inputs, init_states)
 
-
-
 %ode options
 options = odeset('RelTol',1e-8,'AbsTol',1e-10);
 
 %params
 tau = 80;
-T = 0.1
+T = 0.1;
 
 D = 480;
 N = 190;
 Nu = 1;
 lambda = 100;
 
-%tworzenie tablizy lokalnych transmitancji
-Gz_tab = zeros(1,5);
-for i=1:5
-    Gs = linear_model(h2_lin_tab(i), F1_lin_tab(i), FD_lin, tau); 
-    Gz_tab(i) = c2d(tf(Gs),T,'zoh');
-end
 
-%TODO: przygotowaæ funkcjê przynale¿noœci f F1 -> {(0,1) x 5}
-
-% na ten moment mamy: create_wages
-
+%TODO: przygotowaæ funkcjê przynale¿noœci 
 
 %Parametry startowe
 F1_init = init_inputs(1);
@@ -32,33 +21,49 @@ Fd_init = init_inputs(2);
 h1_init = init_states(1);
 h2_init = init_states(2);
 
-%Odpowiedz skokowa
-for Gz in Gz_tab
-s = step(Gz, D/Gz.Ts);
-s = s(:,:,1);
+
+Gz_tab = cell(1,5);
+s_tab = cell(1,5);
+M_tab = cell(1,5);
+Mp_tab = cell(1,5);
+K_tab = cell(1,5);
 
 LMBD = lambda*eye(Nu);
 
-%Wyznaczanie macierzy M
 M = zeros(N, Nu);
-for i=1:1:Nu
-   M(i:N,i)=s(1:N-i+1)';
-end
-
-%Wyznaczanie macierzy Mp
 Mp= zeros(N, D-1);
-for i=1:N
-    for j=1:D-1
-        if i+j<=D
-            Mp(i,j)=s(i+j)-s(j);
-        else
-            Mp(i,j)=s(D)-s(j);
+
+
+for reg = 1:5
+    %tworzenie tablicy lokalnych transmitancji
+    Gs = linear_model(h2_lin_tab(reg), F1_lin_tab(reg), FD_lin, tau); 
+    Gz_tab{reg} = c2d(tf(Gs),T,'zoh');
+    
+    %Odpowiedz skokowa
+    s = step(Gz_tab{reg}, D/Gz_tab{reg}.Ts);
+    s_tab{reg} = s(:,:,1);
+    
+    %Wyznaczanie macierzy M
+    for i=1:Nu
+        M(i:N,i)=s(1:N-i+1)';
+    end
+    M_tab{reg} = M;
+    
+    %Wyznaczanie macierzy Mp
+    for i=1:N
+        for j=1:D-1
+            if i+j<=D
+                Mp(i,j)=s(i+j)-s(j);
+            else
+                Mp(i,j)=s(D)-s(j);
+            end
         end
     end
+    Mp_tab{reg} = Mp;
+    
+    %Wyznaczenie K - wektora wzmocnieñ
+    K_tab{reg}=(M'*M + LMBD)^(-1)*M';
 end
-
-%Wyznaczenie K - wektora wzmocnieñ
-K=(M'*M + LMBD)^(-1)*M';
 
 
 %Czesc dynamiczna
@@ -74,23 +79,32 @@ u_prev = F1_init;
 
 %Main
 for k=2:t_sim
-    if k >= (Gz.InputDelay(1)) %don't know bout that chief
-        stateHandler = @(t,x) model(t,x,u, Fd_init); 
-        [t, h] = ode45(stateHandler,[0 Gz.Ts],h(end, :), options);
+    if k >= (Gz_tab{1}.InputDelay(1)) %don't know bout that chief
+        stateHandler = @(t,x) model(t,x,u, uk(k - (Gz_tab{1}.InputDelay(1)))); 
+        [t, h] = ode45(stateHandler,[0 Gz_tab{1}.Ts],h(end, :), options);
         y(k) = h(end,2);
     end
     
-   yk=ones(N,1)*y(k);
+    %obliczane s¹ wagi
+    %----TODO----%
+    
+    %regulatory lokalne licza sterowanie
+    dUk = 0;
+    for reg=1:5
+        yk=ones(N,1)*y(k);
  
-   y0=yk+Mp*dUp;
+        y0=yk+Mp_tab{reg}*dUp;
    
-   dUk=K*(y_zad'-y0);
+        dUk_reg=K_tab{reg}*(y_zad'-y0);
+        % dUk = dUk + dUk_reg * (waga regulatora)  --- TODO ---
+    end
+   
    
    %Prawo regulacji
-   u=u_prev+dUk(1);
+   u=u_prev+dUk;
    u_out = [u_out; u];
    u_prev = u;
- 
+   
    %Wyznaczenie zmian sterowania
    dUp=[dUk(1) dUp(1:end-1)']';
 end
@@ -98,50 +112,3 @@ end
 u_out = u_out';
 
 end
-for local_F1p=F1p_array
-    G_local = linear_model(h1p, local_F1p,FDp, tau);
-    tfs{i} = c2d(tf(G_local),T,'zoh');
-    i = i + 1;
-end
- 
-Fd = [ ones(1,Tk/2).*FDp, ones(1,Tk/2).*(FDp-5) ] ;
-
-
-fuzzy_dmc = FuzzyDMCReg(LocalDMCs, MembershipFunctions);
-fuzzy_dmc.reset(F1p);
-fuzzy_dmc.setValue(yzad);
- 
-uk2= ones((Gz.InputDelay(1)),1).*F1p;
-y2 = ones(Tk, 1).*h2p;
-h = [h1p, h2p];
- 
-%Main simulation loop.
-for k=2:Tk
-    if k > (Gz.InputDelay(1))
-        stateHandler = @(t,x) model(t,x,uk2(k - (Gz.InputDelay(1))), Fd(k));
-        [t, h] = ode45(stateHandler,[0 Gz.Ts],h(end, :), options);
-        y2(k) = h(end,2);
-    end
-    uk2(k) = fuzzy_dmc.countValue(y2(k));
-end
- 
- 
-figure();
-subplot(2,1,1);
-stairs(ones(Tk,1).*(yzad), 'g');
-hold on;
-stairs(y1, 'r');
-stairs(y2, 'b');
-title('Dzialanie regulatora rozmytego (Noise) dla nastaw D=2393, N =600, Nu=1, lambda=1');
-legend('Wyj?cie zadane', 'Wyj?cie regulatora z', 'Wyj?cie regulatora bez' , 'Location', 'east');
-xlabel('k');
-ylabel('y');
-subplot(2,1,2);
-stairs( uk1, 'r');
-hold on;
-stairs( uk2, 'b');
-stairs( Fd, 'g');
-xlabel('k');
-ylabel('u');
-legend('Sterowanie z', 'Sterowanie bez', 'Zak?ócenie');
-hold off;
