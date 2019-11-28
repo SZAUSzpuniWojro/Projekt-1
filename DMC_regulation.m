@@ -51,7 +51,7 @@ u_prev = F1_init;
 
 %Main
 for k=2:t_sim
-    if k >= (Gz.InputDelay(1)) %don't know bout that chief
+    if k >= (Gz.InputDelay(1)*Gz.Ts) %don't know bout that chief
         stateHandler = @(t,x) model(t,x,u, Fd_init); 
         [t, h] = ode45(stateHandler,[0 Gz.Ts],h(end, :), options);
         y(k) = h(end,2);
