@@ -1,16 +1,48 @@
-function [y, u_out] = fuzzy_dmc_regulation(F1_lin_tab, FD_lin, h2_lin_tab, t_sim, y_zad, init_inputs, init_states)
+function [y, u_out] = fuzzy_dmc_regulation(F1_lin_tab, FD_lin, h_lin_tab, t_sim, y_zad, init_inputs, init_states, l, height)
+
+%PARAMETERS
+%F1_lint_tab - (1x5) vector of F1 linearization points
+%FD_lin - (scalar) input of FD linearization point
+%h_lin_tab - (2x5) first row is h1 points of linearization, second row is h2 points of linearization
+%t_sim - (scalar) simulation time
+%y_zad - (scalar) setpoint
+%init_inputs - (1x2) [F1, FD]
+%init_states - (1x2) [h1_init, h2_init]
+%l - (scalar) how many regulators
+%height - (scalar) maximum height of second tank
+
+if (l > 5) && (l < 2)
+    disp('Liczba regulatorow powinna zawierac sie miedzy 2 a 5')
+    return
+end
+
+switch l
+    case 2
+       membership_fun = load('fuzzy/eh2.mat');
+    case 3
+       membership_fun = load('fuzzy/eh3.mat');
+    case 4
+       membership_fun = load('fuzzy/eh4.mat');
+    case 5
+       membership_fun = load('fuzzy/eh5.mat');
+    otherwise
+       disp('Liczba regulatorow powinna byc calkowita liczba')
+       return
+end
+
+mf = struct2cell(membership_fun);
 
 %ode options
 options = odeset('RelTol',1e-8,'AbsTol',1e-10);
 
 %params
 tau = 80;
-T = 0.1;
+T = 0.5;
 
 D = 480;
 N = 190;
 Nu = 1;
-lambda = 100;
+lambda = 40;
 
 
 %TODO: przygotowaæ funkcjê przynale¿noœci 
@@ -22,11 +54,11 @@ h1_init = init_states(1);
 h2_init = init_states(2);
 
 
-Gz_tab = cell(1,5);
-s_tab = cell(1,5);
-M_tab = cell(1,5);
-Mp_tab = cell(1,5);
-K_tab = cell(1,5);
+Gz_tab = cell(1,l); %transmitancje poszczegolnych regulatorow
+s_tab = cell(1,l); %odpowiedz skokowa poszczegolnych regulatorow
+M_tab = cell(1,l); %macierze dynamiczne poszczegolnych regulatorow
+Mp_tab = cell(1,l); %macierze odpowiedzi swobodnej poszczegolnych regulatorow
+K_tab = cell(1,l); %same as higher
 
 LMBD = lambda*eye(Nu);
 
@@ -34,9 +66,9 @@ M = zeros(N, Nu);
 Mp= zeros(N, D-1);
 
 
-for reg = 1:5
+for reg = 1:l
     %tworzenie tablicy lokalnych transmitancji
-    Gs = linear_model(h2_lin_tab(reg), F1_lin_tab(reg), FD_lin, tau); 
+    Gs = linear_model([h_lin_tab(1,reg), h_lin_tab(2,reg)], F1_lin_tab(reg), FD_lin, tau); %h_lin_tab troche nie tak bo to powinien byc wektor (1x2) h1 i h2
     Gz_tab{reg} = c2d(tf(Gs),T,'zoh');
     
     %Odpowiedz skokowa
@@ -70,33 +102,39 @@ end
 dUp=zeros(1,(D-1))';
 y_zad(1:N)= y_zad;
 
-uk= ones((Gz.InputDelay(1)),1).*F1_init;
+uk= ones((Gz_tab{1}.InputDelay(1)),1).*F1_init;
 y = ones(t_sim, 1).*h2_init;
 h = [h1_init, h2_init];
 
 u_out = [F1_init];
 u_prev = F1_init;
 
+wages=[];
+
 %Main
 for k=2:t_sim
-    if k >= (Gz_tab{1}.InputDelay(1)) %don't know bout that chief
-        stateHandler = @(t,x) model(t,x,u, uk(k - (Gz_tab{1}.InputDelay(1)))); 
+    if k >= (Gz_tab{1}.InputDelay(1)*T) %don't know bout that chief
+        stateHandler = @(t,x) model(t,x,u, FD_lin); 
         [t, h] = ode45(stateHandler,[0 Gz_tab{1}.Ts],h(end, :), options);
         y(k) = h(end,2);
     end
     
-    %obliczane s¹ wagi
-    %----TODO----%
+    mf_val = y(k)*(100/height);
+    if mf_val >100
+        mf_val=100;
+    end
+    %obliczane sa wagi
+    wages = evalfis(mf{1}, mf_val); %dla zakresu 0-20cm h2 '5' bo funkcja w zakresie 0-100
     
     %regulatory lokalne licza sterowanie
     dUk = 0;
-    for reg=1:5
+    for reg=1:l
         yk=ones(N,1)*y(k);
  
         y0=yk+Mp_tab{reg}*dUp;
    
         dUk_reg=K_tab{reg}*(y_zad'-y0);
-        % dUk = dUk + dUk_reg * (waga regulatora)  --- TODO ---
+        dUk = dUk + dUk_reg * wages(reg);
     end
    
    
