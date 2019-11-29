@@ -69,10 +69,12 @@ switch l
 end
 
 static_gain_tab = cell(1,l);
+heights=[];
 
 for reg = 1:l
     Gs = linear_model_SISO([h_lin_tab(1,reg), h_lin_tab(2,reg)], F1_lin_tab(reg), FD_lin, tau);
-    [z,static_gain_tab{reg}] = zero(tf(Gs));
+    [z,static_gain_tab{reg}] = zero(tf(Gs)); %TU
+    heights(reg)= h_lin_tab(2,reg);
 end
 
 h2_out = [];
@@ -88,7 +90,7 @@ for F1 = 0:100
     
     wages = evalfis(mf{1}, mf_val);
     for reg = 1:l
-     h2_temp = h2_temp + (F1*static_gain_tab{reg}) * wages(reg);
+     h2_temp = h2_temp + (F1*static_gain_tab{reg} + heights(reg)) * wages(reg); %COS TUTAJ SIE WYWALA
     end
     h2_out = [h2_out, h2_temp];
 end
