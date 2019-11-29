@@ -93,7 +93,7 @@ for reg = 1:l
     end
     Mp_tab{reg} = Mp;
     
-    %Wyznaczenie K - wektora wzmocnieñ
+    %Wyznaczenie wektora K
     K_tab{reg}=(M'*M + LMBD)^(-1)*M';
 end
 

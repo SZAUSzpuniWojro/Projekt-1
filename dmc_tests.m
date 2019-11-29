@@ -1,4 +1,4 @@
-clear;
+%clear;
 
 F1 = 52;
 FD = 13;
@@ -16,7 +16,7 @@ N = 190;
 Nu = 1;
 lambda = 40; 
 sim_time = 5000;
-y_zad = 6.6;
+y_zad = 30;
 
 [y, uk] = DMC_regulation(Gz, D, N, Nu, lambda, sim_time, y_zad, [F1, FD], init_values);
 

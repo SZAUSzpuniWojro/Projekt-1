@@ -1,14 +1,14 @@
-clear;
+%clear;
 
 t_sim = 5000;
-y_zad = 20;
+y_zad = 30;
 FD_lin = 13; 
-height = 20; %(scalar) maximum height of second tank
+height = 40; %(scalar) maximum height of second tank
 
 init_states = [11.7036, 7.9868];
 init_inputs = [52, 13];
 
-l = 5; %(scalar) how many regulators
+l = 2; %(scalar) how many regulators
 
 %Przykladowe punkty linearyzacji
 switch l
@@ -51,5 +51,5 @@ end
 
 plot(1:t_sim, y);
 hold on;
-plot(1:t_sim, u_out);
-legend('y','u');
+%plot(1:t_sim, u_out);
+%legend('y','u');
