@@ -69,17 +69,16 @@ switch l
 end
 
 static_gain_tab = cell(1,l);
-heights=[];
 
 for reg = 1:l
     Gs = linear_model_SISO([h_lin_tab(1,reg), h_lin_tab(2,reg)], F1_lin_tab(reg), FD_lin, tau);
     [z,static_gain_tab{reg}] = zero(tf(Gs)); %TU
-    heights(reg)= h_lin_tab(2,reg);
 end
 
 h2_out = [];
 for F1 = 0:100
     h2_temp = 0;
+   
     h1 = ((F1 + FD_lin)/a_1)^2;
     h2 = (sqrt(h1)*a_1/a_2)^2;
     
@@ -90,10 +89,15 @@ for F1 = 0:100
     
     wages = evalfis(mf{1}, mf_val);
     for reg = 1:l
-     h2_temp = h2_temp + (F1*static_gain_tab{reg} + heights(reg)) * wages(reg); %COS TUTAJ SIE WYWALA
+     h2_temp = h2_temp + F1*static_gain_tab{reg} * wages(reg); %COS TUTAJ SIE WYWALA
     end
     h2_out = [h2_out, h2_temp];
 end
+
+%tu trza to pykn?? od tej strony ze dla modeli zlinearyzowanych myknac
+%charakterystyke statyczna dla odpowiedniego sterowania F1 i przemnozyc
+%przez odpowiednie wagi. Nie lubimy transmitancji i odpowiedzi skokowej,
+%ona tylko utrudnia ?ycie :c
 
 
 plot(0:100,h2_out)
